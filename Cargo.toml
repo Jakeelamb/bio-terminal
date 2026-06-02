@@ -1,0 +1,23 @@
+[package]
+name = "bio-terminal"
+version = "0.1.0"
+edition = "2024"
+description = "Biology-themed terminal animations: DNA/RNA matrix rain, rotating codon-aware helices, and a codon wheel."
+license = "MIT"
+repository = "https://github.com/Jakeelamb/bio-terminal"
+homepage = "https://github.com/Jakeelamb/bio-terminal"
+readme = "README.md"
+keywords = ["terminal", "bioinformatics", "dna", "rna", "ascii"]
+categories = ["command-line-utilities", "visualization"]
+rust-version = "1.85"
+include = [
+    "Cargo.toml",
+    "Cargo.lock",
+    "LICENSE",
+    "README.md",
+    "assets/*.gif",
+    "src/**/*.rs",
+    "tools/generate_gifs.py",
+]
+
+[dependencies]
