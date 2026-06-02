@@ -33,10 +33,10 @@ cargo run -- helix --dna
 ## Run
 
 ```bash
-bio-terminal helix --dna
-bio-terminal helix --rna
-bio-terminal matrix --dna
-bio-terminal matrix --rna
+bio-terminal          # DNA helix
+bio-terminal h r      # RNA helix
+bio-terminal m d      # DNA matrix
+bio-terminal matrix -r
 ```
 
 `helix --dna` is the default.
@@ -57,6 +57,25 @@ cargo run --features codon-wheel -- codon
 | `c` | Cycle color palettes |
 | `f` | Toggle focus mode and hide the footer |
 | `q` or `Ctrl-C` | Quit cleanly |
+
+## CLI
+
+Modes:
+
+- `h`, `helix`: rotating double helix.
+- `m`, `matrix`: nucleotide rain.
+- `codon`: optional experimental codon wheel, available with `--features codon-wheel`.
+
+Alphabets:
+
+- `d`, `dna`, `-d`, `--dna`: use `ATCG`.
+- `r`, `rna`, `-r`, `--rna`: use `AUCG`.
+
+Long-form help:
+
+```bash
+bio-terminal -h
+```
 
 ## Modes
 

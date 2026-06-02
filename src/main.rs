@@ -29,48 +29,114 @@ const RNA_CODONS: &[&[u8; 3]] = &[
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().skip(1).collect();
-    let mode = args.first().map(String::as_str).unwrap_or("helix");
-    let alphabet = if args.iter().any(|arg| arg == "--rna" || arg == "rna") {
-        RNA
-    } else {
-        DNA
+    let cli = match Cli::parse(&args) {
+        Ok(cli) => cli,
+        Err(message) => {
+            eprintln!("{message}\n");
+            print_help();
+            return Ok(());
+        }
     };
+    if cli.help {
+        print_help();
+        return Ok(());
+    }
 
-    match mode {
+    match cli.mode {
         #[cfg(feature = "codon-wheel")]
-        "codon" | "codons" | "table" => run_interactive(AppMode::Codon),
+        RequestedMode::Codon => run_interactive(AppMode::Codon),
         #[cfg(not(feature = "codon-wheel"))]
-        "codon" | "codons" | "table" => {
+        RequestedMode::Codon => {
             eprintln!("codon wheel is disabled in the default build");
             eprintln!("run with: cargo run --features codon-wheel -- codon");
             Ok(())
         }
-        "matrix" | "rain" => run_interactive(if alphabet == RNA {
+        RequestedMode::Matrix => run_interactive(if cli.alphabet == Alphabet::Rna {
             AppMode::MatrixRna
         } else {
             AppMode::MatrixDna
         }),
-        "helix" | "dna" | "rna" => run_interactive(if alphabet == RNA {
+        RequestedMode::Helix => run_interactive(if cli.alphabet == Alphabet::Rna {
             AppMode::HelixRna
         } else {
             AppMode::HelixDna
         }),
-        "help" | "--help" | "-h" => {
-            print_help();
-            Ok(())
-        }
-        _ => {
-            eprintln!("unknown mode: {mode}");
-            print_help();
-            Ok(())
-        }
     }
 }
 
 fn print_help() {
     eprintln!(
-        "bio-terminal\n\n  cargo run -- helix [--dna|--rna]\n  cargo run -- matrix [--dna|--rna]\n  cargo run --features codon-wheel -- codon\n\nControls while running:\n  Left/Right: cycle mode\n  Up/Down: change speed, down to 0.00x freeze\n  +/-: change visual scale\n  c: cycle colors\n  f: toggle focus mode\n  q: quit\n\nDefault: helix --dna"
+        "bio-terminal\n\nUSAGE:\n  bio-terminal [MODE] [ALPHABET]\n\nMODES:\n  h, helix       Rotating double helix. This is the default.\n  m, matrix      Nucleotide rain, cmatrix-style.\n  codon          Experimental codon wheel. Requires --features codon-wheel.\n\nALPHABET:\n  d, dna, -d, --dna      Use ATCG. This is the default.\n  r, rna, -r, --rna      Use AUCG.\n\nEXAMPLES:\n  bio-terminal              # DNA helix\n  bio-terminal h r          # RNA helix\n  bio-terminal m d          # DNA matrix\n  bio-terminal matrix -r    # RNA matrix\n  cargo run -- h --rna\n  cargo run --features codon-wheel -- codon\n\nCONTROLS:\n  Left/Right    Cycle mode while running\n  Up/Down       Change speed; Down reaches 0.00x freeze\n  +/-           Change visual scale\n  c             Cycle color palettes\n  f             Toggle focus mode and hide footer\n  q or Ctrl-C   Quit cleanly"
     );
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Alphabet {
+    Dna,
+    Rna,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum RequestedMode {
+    Helix,
+    Matrix,
+    Codon,
+}
+
+struct Cli {
+    mode: RequestedMode,
+    alphabet: Alphabet,
+    help: bool,
+}
+
+impl Cli {
+    fn parse(args: &[String]) -> Result<Self, String> {
+        let mut mode = RequestedMode::Helix;
+        let mut alphabet = Alphabet::Dna;
+        let mut mode_set = false;
+
+        for arg in args {
+            match arg.as_str() {
+                "-h" | "--help" | "help" => {
+                    return Ok(Self {
+                        mode,
+                        alphabet,
+                        help: true,
+                    });
+                }
+                "h" | "helix" => {
+                    if mode_set {
+                        return Err(format!("multiple modes supplied; unexpected `{arg}`"));
+                    }
+                    mode = RequestedMode::Helix;
+                    mode_set = true;
+                }
+                "m" | "matrix" | "rain" => {
+                    if mode_set {
+                        return Err(format!("multiple modes supplied; unexpected `{arg}`"));
+                    }
+                    mode = RequestedMode::Matrix;
+                    mode_set = true;
+                }
+                "codon" | "codons" | "table" => {
+                    if mode_set {
+                        return Err(format!("multiple modes supplied; unexpected `{arg}`"));
+                    }
+                    mode = RequestedMode::Codon;
+                    mode_set = true;
+                }
+                "d" | "dna" | "-d" | "--dna" => alphabet = Alphabet::Dna,
+                "r" | "rna" | "-r" | "--rna" => alphabet = Alphabet::Rna,
+                _ => return Err(format!("unknown argument `{arg}`")),
+            }
+        }
+
+        Ok(Self {
+            mode,
+            alphabet,
+            help: false,
+        })
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -978,6 +1044,32 @@ mod tests {
         assert_eq!(&rna[..3], b"AUG");
         assert_eq!(rna.len(), 24);
         assert!(rna.iter().all(|base| RNA.contains(base)));
+    }
+
+    #[test]
+    fn cli_parses_short_aliases() {
+        let args = ["m".to_string(), "r".to_string()];
+        let cli = Cli::parse(&args).unwrap();
+        assert_eq!(cli.mode, RequestedMode::Matrix);
+        assert_eq!(cli.alphabet, Alphabet::Rna);
+
+        let args = ["h".to_string(), "-d".to_string()];
+        let cli = Cli::parse(&args).unwrap();
+        assert_eq!(cli.mode, RequestedMode::Helix);
+        assert_eq!(cli.alphabet, Alphabet::Dna);
+    }
+
+    #[test]
+    fn cli_defaults_to_dna_helix() {
+        let cli = Cli::parse(&[]).unwrap();
+        assert_eq!(cli.mode, RequestedMode::Helix);
+        assert_eq!(cli.alphabet, Alphabet::Dna);
+    }
+
+    #[test]
+    fn cli_rejects_unknown_arguments() {
+        let args = ["garbage".to_string()];
+        assert!(Cli::parse(&args).is_err());
     }
 
     #[test]

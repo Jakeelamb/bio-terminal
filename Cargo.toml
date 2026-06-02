@@ -1,6 +1,6 @@
 [package]
 name = "bio-terminal"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 description = "Biology-themed terminal animations: DNA/RNA matrix rain and rotating codon-aware helices."
 license = "MIT"
