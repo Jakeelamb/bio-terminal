@@ -2,7 +2,7 @@
 
 Biology-themed terminal animations for people who wanted `cmatrix`, but with nucleotides.
 
-`bio-terminal` is a zero-dependency Rust CLI with DNA/RNA matrix rain, codon-aware rotating helices, and a rotating RNA codon wheel.
+`bio-terminal` is a zero-dependency Rust CLI with DNA/RNA matrix rain and codon-aware rotating helices.
 
 ## Preview
 
@@ -37,10 +37,15 @@ bio-terminal helix --dna
 bio-terminal helix --rna
 bio-terminal matrix --dna
 bio-terminal matrix --rna
-bio-terminal codon
 ```
 
 `helix --dna` is the default.
+
+The codon wheel is still in the codebase, but it is experimental and disabled in the default build:
+
+```bash
+cargo run --features codon-wheel -- codon
+```
 
 ## Controls
 
@@ -59,7 +64,7 @@ bio-terminal codon
 - `matrix --rna`: AUCG rain.
 - `helix --dna`: rotating double helix using generated sense codons and complementary basepairs.
 - `helix --rna`: RNA version using `A-U` and `C-G`.
-- `codon`: rotating RNA codon wheel with amino-acid labels.
+- `codon`: optional experimental RNA codon wheel, available with `--features codon-wheel`.
 
 ## Color Palettes
 

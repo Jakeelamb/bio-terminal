@@ -37,7 +37,14 @@ fn main() -> io::Result<()> {
     };
 
     match mode {
+        #[cfg(feature = "codon-wheel")]
         "codon" | "codons" | "table" => run_interactive(AppMode::Codon),
+        #[cfg(not(feature = "codon-wheel"))]
+        "codon" | "codons" | "table" => {
+            eprintln!("codon wheel is disabled in the default build");
+            eprintln!("run with: cargo run --features codon-wheel -- codon");
+            Ok(())
+        }
         "matrix" | "rain" => run_interactive(if alphabet == RNA {
             AppMode::MatrixRna
         } else {
@@ -62,7 +69,7 @@ fn main() -> io::Result<()> {
 
 fn print_help() {
     eprintln!(
-        "bio-terminal\n\n  cargo run -- helix [--dna|--rna]\n  cargo run -- matrix [--dna|--rna]\n  cargo run -- codon\n\nControls while running:\n  Left/Right: cycle mode\n  Up/Down: change speed, down to 0.00x freeze\n  +/-: change visual scale\n  c: cycle colors\n  f: toggle focus mode\n  q: quit\n\nDefault: helix --dna"
+        "bio-terminal\n\n  cargo run -- helix [--dna|--rna]\n  cargo run -- matrix [--dna|--rna]\n  cargo run --features codon-wheel -- codon\n\nControls while running:\n  Left/Right: cycle mode\n  Up/Down: change speed, down to 0.00x freeze\n  +/-: change visual scale\n  c: cycle colors\n  f: toggle focus mode\n  q: quit\n\nDefault: helix --dna"
     );
 }
 
@@ -72,6 +79,7 @@ enum AppMode {
     MatrixRna,
     HelixDna,
     HelixRna,
+    #[cfg(feature = "codon-wheel")]
     Codon,
 }
 
@@ -81,17 +89,25 @@ impl AppMode {
             Self::MatrixDna => Self::MatrixRna,
             Self::MatrixRna => Self::HelixDna,
             Self::HelixDna => Self::HelixRna,
+            #[cfg(feature = "codon-wheel")]
             Self::HelixRna => Self::Codon,
+            #[cfg(not(feature = "codon-wheel"))]
+            Self::HelixRna => Self::MatrixDna,
+            #[cfg(feature = "codon-wheel")]
             Self::Codon => Self::MatrixDna,
         }
     }
 
     fn prev(self) -> Self {
         match self {
+            #[cfg(feature = "codon-wheel")]
             Self::MatrixDna => Self::Codon,
+            #[cfg(not(feature = "codon-wheel"))]
+            Self::MatrixDna => Self::HelixRna,
             Self::MatrixRna => Self::MatrixDna,
             Self::HelixDna => Self::MatrixRna,
             Self::HelixRna => Self::HelixDna,
+            #[cfg(feature = "codon-wheel")]
             Self::Codon => Self::HelixRna,
         }
     }
@@ -102,13 +118,17 @@ impl AppMode {
             Self::MatrixRna => "RNA matrix",
             Self::HelixDna => "DNA helix",
             Self::HelixRna => "RNA helix",
+            #[cfg(feature = "codon-wheel")]
             Self::Codon => "RNA codon wheel",
         }
     }
 
     fn alphabet(self) -> &'static [u8; 4] {
         match self {
+            #[cfg(feature = "codon-wheel")]
             Self::MatrixRna | Self::HelixRna | Self::Codon => RNA,
+            #[cfg(not(feature = "codon-wheel"))]
+            Self::MatrixRna | Self::HelixRna => RNA,
             Self::MatrixDna | Self::HelixDna => DNA,
         }
     }
@@ -192,6 +212,7 @@ impl Palette {
         }
     }
 
+    #[cfg(feature = "codon-wheel")]
     fn codon(self, ring: usize, active: bool) -> &'static str {
         if active {
             return match (self, ring) {
@@ -229,6 +250,7 @@ impl Palette {
         }
     }
 
+    #[cfg(feature = "codon-wheel")]
     fn accent(self) -> &'static str {
         match self {
             Self::Classic => "\x1b[91m",
@@ -252,6 +274,7 @@ impl Palette {
         }
     }
 
+    #[cfg(feature = "codon-wheel")]
     fn active_base(self, base: u8) -> &'static str {
         if !matches!(self, Self::Bases) {
             return self.accent();
@@ -404,6 +427,7 @@ fn run_interactive(initial_mode: AppMode) -> io::Result<()> {
 enum RenderState {
     Matrix(MatrixState),
     Helix(HelixState),
+    #[cfg(feature = "codon-wheel")]
     Codon(CodonState),
 }
 
@@ -416,6 +440,7 @@ impl RenderState {
             AppMode::HelixDna | AppMode::HelixRna => {
                 Self::Helix(HelixState::new(seed, mode.alphabet()))
             }
+            #[cfg(feature = "codon-wheel")]
             AppMode::Codon => Self::Codon(CodonState::new(seed)),
         }
     }
@@ -439,6 +464,7 @@ impl RenderState {
                 state.draw(out, mode, seed, speed, scale, focus, palette)?;
                 Ok(Duration::from_millis(33))
             }
+            #[cfg(feature = "codon-wheel")]
             Self::Codon(state) => {
                 state.draw(out, seed, speed, scale, focus, palette)?;
                 Ok(Duration::from_millis(320))
@@ -603,11 +629,13 @@ impl HelixState {
     }
 }
 
+#[cfg(feature = "codon-wheel")]
 struct CodonState {
     theta: f32,
     tick: usize,
 }
 
+#[cfg(feature = "codon-wheel")]
 impl CodonState {
     fn new(seed: u64) -> Self {
         Self {
@@ -756,6 +784,7 @@ fn alphabet_seed(alphabet: &[u8; 4]) -> u64 {
     if alphabet == RNA { 0xA0C6 } else { 0xA7C6 }
 }
 
+#[cfg(feature = "codon-wheel")]
 fn draw_polar(
     out: &mut impl Write,
     center_x: i32,
@@ -773,6 +802,7 @@ fn draw_polar(
     Ok(())
 }
 
+#[cfg(feature = "codon-wheel")]
 fn amino_acid(codon: &[u8; 3]) -> &'static str {
     match codon {
         b"UUU" | b"UUC" => "Phe (F)",
@@ -951,6 +981,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "codon-wheel")]
     fn amino_acid_table_has_key_codons() {
         assert_eq!(amino_acid(b"AUG"), "Met (M)");
         assert_eq!(amino_acid(b"UGG"), "Trp (W)");

@@ -1,8 +1,8 @@
 [package]
 name = "bio-terminal"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
-description = "Biology-themed terminal animations: DNA/RNA matrix rain, rotating codon-aware helices, and a codon wheel."
+description = "Biology-themed terminal animations: DNA/RNA matrix rain and rotating codon-aware helices."
 license = "MIT"
 repository = "https://github.com/Jakeelamb/bio-terminal"
 homepage = "https://github.com/Jakeelamb/bio-terminal"
@@ -21,3 +21,7 @@ include = [
 ]
 
 [dependencies]
+
+[features]
+default = []
+codon-wheel = []
